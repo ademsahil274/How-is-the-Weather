@@ -20,6 +20,10 @@ THEN I am again presented with current and future conditions for that city <br>
 
 ## Mock-Up
 
-![](./5-days%20weather%20forecast.PNG)
+![Click here to see the Mock-Up](./5-days%20weather%20forecast.PNG)
 
+## Links
+
+* Clicking [this link](git@github.com:ademsahil274/How-is-the-Weather.git) will take us to my GitHub Repo.
+* Clicking [this link](https://ademsahil274.github.io/How-is-the-Weather/) will take us to my website.
 
