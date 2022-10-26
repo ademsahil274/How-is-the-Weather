@@ -1,43 +1,132 @@
+// Global variables
+var searchHistory = [];
+var weatherApiRootUrl = 'https://api.openweathermap.org';
+var weatherApiKey = 'd91f911bcf2c0f925fb6535547a5ddc9';
 
-var botton= document.getElementById("search-input");
+// DOM element references
+var searchForm = document.querySelector('#search-form');
+var searchInput = document.querySelector('#search-input');
+var todayContainer = document.querySelector('#today');
+var forecastContainer = document.querySelector('#forecast');
+var searchHistoryContainer = document.querySelector('#history');
 
-botton.addEventListener('click', async function(){
-    var city=document.getElementById("city-search").value;
-    console.log({cityName: city});
+// Fetches weather data for given location from the Weather Geolocation
+// endpoint; then, calls functions to display current and forecast weather data.
+//location argument is an object {
+//	lat: 23423,
+//	lon: arsfe
+//}
 
-    var cityCordinates= await  fetch("https://api.openweathermap.org/data/2.5/weather?q="+city+"&appid=37b933a5aef60466232e237b711fdeac");
-    var cordinateJson= await cityCordinates.json();
-    // .then(response => response.json())
-    // .then(data => console.log(data))
+// Add timezone plugins to day.js
+dayjs.extend(window.dayjs_plugin_utc);
+dayjs.extend(window.dayjs_plugin_timezone);
 
-    // .catch(err => alert("Please insert valid city name"))
-    console.log({cordinates: cordinateJson});
-    console.log({latitude: cordinateJson.coord.lat});
-    console.log({longitude: cordinateJson.coord.lon});
+function renderItems(city, data) {
+  // renderCurrentWeather(city, data.current, data.timezone);
+  renderForecast(data.daily, data.timezone);
+}
 
-    var lat= cordinateJson.coord.lat;
-    var long= cordinateJson.coord.lon;
+function fetchWeather(location) {
+ 	var { lat } = location;
+  	var { lon } = location;
+  	var city = location.name;
+ 	var apiUrl = `${weatherApiRootUrl}/data/2.5/onecall?lat=${lat}&lon=${lon}&units=imperial&exclude=minutely,hourly&appid=${weatherApiKey}`;
 
-    var current= await fetch("https://api.openweathermap.org/data/2.5/weather?lat="+lat+"&lon="+long+"&appid=37b933a5aef60466232e237b711fdeac");
-    var currentjson= await current.json();
+ 	fetch(apiUrl)
+ 		.then(
 
-    console.log({currentWeather: currentjson});
+ 			function (res) {
+	      		return res.json();
+	    	})
+	    .then(
+	    	function (data) {
 
-    var currentData= document.getElementById("current-weather-data");
-    currentData.innerHTML+="<span>"+currentjson+"</span>";
+	    	console.log("DATA", data)
+      		renderItems(city, data);
+            })
+    	.catch(function (err) {
+      		console.error(err);
+    	    });
 
-    var five= await fetch("https://api.openweathermap.org/data/2.5/forecast?lat="+lat+"&lon="+long+"&appid=37b933a5aef60466232e237b711fdeac");
-    var fivejson= await five.json();
-    console.log({fiveDays: fivejson});
+}
 
-    var day1= fivejson.list[0];
-    var day2= fivejson.list[8];
-    var day3= fivejson.list[16];
-    var day4= fivejson.list[24];
-    var day5= fivejson.list[32];
-    console.log({day1});
-    console.log({day2});
-    console.log({day3});
-    console.log({day4});
-    console.log({day5});
+// Function to display 5 day forecast.
+function renderForecast(dailyForecast, timezone) {
+  // Create unix timestamps for start and end of 5 day forecast
+  var startDt = dayjs().tz(timezone).add(1, 'day').startOf('day').unix();
+  var endDt = dayjs().tz(timezone).add(6, 'day').startOf('day').unix();
+
+  var headingCol = document.createElement('div');
+  var heading = document.createElement('h4');
+
+  headingCol.setAttribute('class', 'col-12');
+  heading.textContent = '5-Day Forecast:';
+  headingCol.append(heading);
+
+  forecastContainer.innerHTML = '';
+  forecastContainer.append(headingCol);
+  for (var i = 0; i < dailyForecast.length; i++) {
+    // The api returns forecast data which may include 12pm on the same day and
+    // always includes the next 7 days. The api documentation does not provide
+    // information on the behavior for including the same day. Results may have
+    // 7 or 8 items.
+    if (dailyForecast[i].dt >= startDt && dailyForecast[i].dt < endDt) {
+      renderForecastCard(dailyForecast[i], timezone);
+    }
+  }
+}
+
+function renderForecastCard(forecast, timezone) {
+  // variables for data from api
+  var unixTs = forecast.dt;
+  var iconUrl = `https://openweathermap.org/img/w/${forecast.weather[0].icon}.png`;
+  var iconDescription = forecast.weather[0].description;
+  var tempF = forecast.temp.day;
+  var { humidity } = forecast;
+  var windMph = forecast.wind_speed;
+
+  // Create elements for a card
+  var col = document.createElement('div');
+  var card = document.createElement('div');
+  var cardBody = document.createElement('div');
+  var cardTitle = document.createElement('h5');
+  var weatherIcon = document.createElement('img');
+  var tempEl = document.createElement('p');
+  var windEl = document.createElement('p');
+  var humidityEl = document.createElement('p');
+
+  col.append(card);
+  card.append(cardBody);
+  cardBody.append(cardTitle, weatherIcon, tempEl, windEl, humidityEl);
+
+  col.setAttribute('class', 'col-md');
+  col.classList.add('five-day-card');
+  card.setAttribute('class', 'card bg-primary h-100 text-white');
+  cardBody.setAttribute('class', 'card-body p-2');
+  cardTitle.setAttribute('class', 'card-title');
+  tempEl.setAttribute('class', 'card-text');
+  windEl.setAttribute('class', 'card-text');
+  humidityEl.setAttribute('class', 'card-text');
+
+  // Add content to elements
+  cardTitle.textContent = dayjs.unix(unixTs).tz(timezone).format('M/D/YYYY');
+  weatherIcon.setAttribute('src', iconUrl);
+  weatherIcon.setAttribute('alt', iconDescription);
+  tempEl.textContent = `Temp: ${tempF} °F`;
+  windEl.textContent = `Wind: ${windMph} MPH`;
+  humidityEl.textContent = `Humidity: ${humidity} %`;
+
+  forecastContainer.append(col);
+}
+
+fetchWeather({
+	lat: 10,
+	lon: 10,
+	name: "San Diego"
 })
+
+
+
+
+
+
